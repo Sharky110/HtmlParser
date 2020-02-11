@@ -7,6 +7,20 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        
+        <Menu HorizontalAlignment="Left" Height="30" VerticalAlignment="Top" Width="792">
+            <MenuItem Header="Файл" Height="30" Width="50">
+                <MenuItem Header="Открыть" HorizontalAlignment="Left" Height="30" Width="140" Command="{Binding Path=OpenFileCommand}"/>
+            </MenuItem>
+        </Menu>
+        <ListView HorizontalAlignment="Left" Height="300" Margin="123,90,0,0" VerticalAlignment="Top" Width="640" ItemsSource="{Binding Path=ListOfSites}" >
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button Content="Button" HorizontalAlignment="Left" Margin="10,90,0,0" VerticalAlignment="Top" Width="75"/>
+        <Label Content="Статус" HorizontalAlignment="Left" Margin="10,35,0,0" VerticalAlignment="Top"/>
+
     </Grid>
 </Window>
