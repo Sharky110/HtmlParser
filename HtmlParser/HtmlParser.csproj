@@ -56,6 +56,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="EventArgs\NewProgressBarValueEventArs.cs" />
+    <Compile Include="Managers\ProgressBarManager.cs" />
+    <Compile Include="Models\Page.cs" />
+    <Compile Include="Models\Status.cs" />
     <Compile Include="ViewModels\HtmlParserVM.cs" />
     <Compile Include="ViewModels\HtmlParserVMBase.cs" />
     <Page Include="MainWindow.xaml">

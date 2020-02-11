@@ -5,22 +5,29 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HtmlParser"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="800" ResizeMode="NoResize">
     <Grid>
         <Menu HorizontalAlignment="Left" Height="30" VerticalAlignment="Top" Width="792">
             <MenuItem Header="Файл" Height="30" Width="50">
                 <MenuItem Header="Открыть" HorizontalAlignment="Left" Height="30" Width="140" Command="{Binding Path=OpenFileCommand}"/>
             </MenuItem>
         </Menu>
-        <ListView HorizontalAlignment="Left" Height="300" Margin="123,90,0,0" VerticalAlignment="Top" Width="640" ItemsSource="{Binding Path=ListOfSites}" >
+        <ListView HorizontalAlignment="Left" Height="300" Margin="123,90,0,0" VerticalAlignment="Top" Width="640" ItemsSource="{Binding Path=ListOfPages}" >
             <ListView.View>
                 <GridView>
-                    <GridViewColumn/>
+                    <GridViewColumn Header="URL" DisplayMemberBinding="{Binding Path=URL}" Width="380"/>
+                    <GridViewColumn Header="Count of tags" DisplayMemberBinding="{Binding Path=AmountOfTags}" Width="260"/>
                 </GridView>
             </ListView.View>
         </ListView>
-        <Button Content="Button" HorizontalAlignment="Left" Margin="10,90,0,0" VerticalAlignment="Top" Width="75"/>
-        <Label Content="Статус" HorizontalAlignment="Left" Margin="10,35,0,0" VerticalAlignment="Top"/>
-
+        <Button Content="Посчитать теги" Command="{Binding Path=FindTagsCommand}" HorizontalAlignment="Left" Margin="10,90,0,0" VerticalAlignment="Top" Width="90"/>
+        <Label Content="{Binding Path=Status}" HorizontalAlignment="Left" Margin="10,35,0,0" VerticalAlignment="Top"/>
+        <Grid>
+            <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Margin="0,389,0,0"/>
+            <StackPanel Orientation="Horizontal">
+                <Label Content="{Binding CurrentScriptName}" VerticalAlignment="Center" FontWeight="Bold" FontStyle="Italic" Margin="10, 0, 0, 0"/>
+            </StackPanel>
+        </Grid>
     </Grid>
+
 </Window>
