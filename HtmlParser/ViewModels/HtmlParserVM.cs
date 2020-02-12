@@ -4,12 +4,13 @@ using HtmlParser.Managers;
 using HtmlParser.Models;
 using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -20,6 +21,8 @@ namespace HtmlParser.ViewModels
         #region Constants
 
         private const string DialogFilter = "FileDialogFilter";
+        private const string Pause = "Приостановить";
+        private const string Resume = "Продолжить";
 
         #endregion
 
@@ -27,26 +30,40 @@ namespace HtmlParser.ViewModels
 
         public ICommand OpenFileCommand { get; }
         public ICommand FindTagsCommand { get; }
+        public ICommand StartStopCommand { get; }
+        public ICommand AbortCommand { get; }
 
         #endregion
 
         #region Private variables
 
-        private List<Page> _listOfPages;
+        private ObservableCollection<Page> _listOfPages;
         private string _filePath;
         private string _status;
         private double _progressBarValue;
         private double _itemProgressValue;
-        private double _count;
+        private double percent;
+
+        private ManualResetEvent _manualEvent;
+
+        private CancellationTokenSource source;
+        private CancellationToken token;
+        private string _startStopButtonName;
 
         #endregion
 
         #region Properties
 
-        public List<Page> ListOfPages
+        public ObservableCollection<Page> ListOfPages
         {
-            get => _listOfPages;
-            set => SetProperty(ref _listOfPages, value);
+            get
+            {
+                return _listOfPages;
+            }
+            set
+            {
+                SetProperty(ref _listOfPages, value);
+            }
         }
 
         public string FilePath
@@ -73,6 +90,12 @@ namespace HtmlParser.ViewModels
             set => SetProperty(ref _itemProgressValue, value);
         }
 
+        public string StartStopButtonName
+        {
+            get => _startStopButtonName;
+            set => SetProperty(ref _startStopButtonName, value);
+        }
+
         public ProgressBarManager ProgressBarManager { get; } = ProgressBarManager.Instance;
 
         #endregion
@@ -81,8 +104,42 @@ namespace HtmlParser.ViewModels
         {
             OpenFileCommand = new RelayCommand(c => OpenFile());
             FindTagsCommand = new RelayCommand(c => FindTags());
+            StartStopCommand = new RelayCommand(c => StartStop());
+            AbortCommand = new RelayCommand(c => Abort());
+
             Status = Models.Status.Ready;
-            ProgressBarManager.NewProgressBarValue += ChangeSlider;
+
+            ProgressBarManager.Increase += IncreaseProgress;
+
+            _manualEvent = new ManualResetEvent(true);
+
+            StartStopButtonName = Pause;
+    }
+
+        private void Abort()
+        {
+            if (Models.Status.IsWorking(Status))
+            {
+                source?.Cancel();
+            }
+        }
+
+        private void StartStop()
+        {
+            
+            if (Status == Models.Status.TaskPaused)
+            {
+                _manualEvent.Set();
+                StartStopButtonName = Pause;
+            }
+            else if (Models.Status.IsWorking(Status))
+            {
+
+                _manualEvent.Reset();
+                Status = Models.Status.TaskPaused;
+                StartStopButtonName = Resume;
+            }
+
         }
 
         public async void OpenFile()
@@ -100,21 +157,76 @@ namespace HtmlParser.ViewModels
 
             var sourceFile = await Task.Run(() => File.ReadAllText(FilePath, Encoding.GetEncoding(1252)));
 
-            ListOfPages = sourceFile.Split('\n').ToList().Select(x => new Page(x)).ToList();
-            _count = ListOfPages.Count;
+            ListOfPages = new ObservableCollection<Page>(sourceFile.Split('\n').Select(x => new Page(x)).ToList());
+            if(ListOfPages.Count != 0)
+                percent = 50d / ListOfPages.Count;
         }
 
         public async void FindTags()
         {
-            if (FilePath == null)
+            if (string.IsNullOrEmpty(FilePath))
             {
                 System.Windows.MessageBox.Show("Файл не открыт.", "Ошибка");
                 return;
             }
-            ProgressBarManager.ChangeProgressBarValue(0);
-            await Task.Run(() => GetSources());
-            await Task.Run(() => CountTags());
-            Status = Models.Status.Done;
+
+            if (Models.Status.IsWorking(Status))
+                return;
+
+            source = new CancellationTokenSource();
+            token = source.Token;
+
+            ProgressBarValue = 0;
+
+            try
+            {
+                await Task.Run(() => GetSources(), token);
+                await Task.Run(() => CountTags(), token);
+                await Task.Run(() => SetBiggestUrl(), token);
+            }
+            catch (OperationCanceledException)
+            {
+                Status = Models.Status.TaskAborted;
+                ProgressBarValue = 0;
+            }
+            finally
+            {
+                if(Status != Models.Status.TaskAborted)
+                    Status = Models.Status.Done;
+            }
+        }
+
+        public void GetSources()
+        {
+            Status = Models.Status.GettingSources;
+            HttpWebRequest request;
+            HttpWebResponse responce;
+            foreach (var page in ListOfPages)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    Status = Models.Status.TaskAborted;
+                    return;
+                }
+
+                _manualEvent.WaitOne();
+                Status = Models.Status.GettingSources;
+                try
+                {
+                    request = (HttpWebRequest)WebRequest.Create(page.URL);
+                    responce = (HttpWebResponse)request.GetResponse();
+                }
+                catch
+                {
+                    ProgressBarManager.IncreaseProgress(percent);
+                    continue;
+                }
+
+                using (var sr = new StreamReader(responce.GetResponseStream(), Encoding.GetEncoding("windows-1251")))
+                    page.SourceCode = sr.ReadToEnd();
+
+                ProgressBarManager.IncreaseProgress(percent);
+            }
         }
 
         public void CountTags()
@@ -122,31 +234,47 @@ namespace HtmlParser.ViewModels
             Status = Models.Status.CountTags;
             foreach (var page in ListOfPages)
             {
+                if (string.IsNullOrEmpty(page.SourceCode))
+                {
+                    ProgressBarManager.IncreaseProgress(percent);
+                    continue;
+                }
+                    
+                if (token.IsCancellationRequested)
+                {
+                    Status = Models.Status.TaskAborted;
+                    return;
+                }
+
+                _manualEvent.WaitOne();
+                Status = Models.Status.CountTags;
+
                 page.AmountOfTags = page.SourceCode.Split(new string[] { "</a>" }, StringSplitOptions.None).Count() - 1;
-                ProgressBarManager.ChangeProgressBarValue(50 / _count);
+                page.AmountOfTags += page.SourceCode.Split(new string[] { "</A>" }, StringSplitOptions.None).Count() - 1;
+                ProgressBarManager.IncreaseProgress(percent);
             }
         }
 
-        public void GetSources()
+        public void SetBiggestUrl()
         {
-            Status = Models.Status.GettingSources;
             foreach (var page in ListOfPages)
             {
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(page.URL);
-                HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
-
-                using (var sr = new StreamReader(resp.GetResponseStream(), Encoding.GetEncoding("windows-1251")))
-                    page.SourceCode = sr.ReadToEnd();
-
-                ProgressBarManager.ChangeProgressBarValue(50 / _count);
+                if (token.IsCancellationRequested)
+                {
+                    Status = Models.Status.TaskAborted;
+                    return;
+                }
+                _manualEvent.WaitOne();
+                if (page.AmountOfTags == ListOfPages.Max(p => p.AmountOfTags))
+                {
+                    page.IsBiggest = true;
+                }
             }
         }
 
-        private void ChangeSlider(object sender, NewProgressBarValueEventsArgs e)
+        private void IncreaseProgress(object sender, NewProgressBarValueEventsArgs e)
         {
-            var newValue = e.NewValue;
-            ItemProgressValue += newValue;
-            ProgressBarValue = ItemProgressValue;
+            ProgressBarValue += e.NewValue;
         }
     }
 }

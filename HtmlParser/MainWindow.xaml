@@ -12,7 +12,18 @@
                 <MenuItem Header="Открыть" HorizontalAlignment="Left" Height="30" Width="140" Command="{Binding Path=OpenFileCommand}"/>
             </MenuItem>
         </Menu>
-        <ListView HorizontalAlignment="Left" Height="300" Margin="123,90,0,0" VerticalAlignment="Top" Width="640" ItemsSource="{Binding Path=ListOfPages}" >
+        <ListView x:Name="lv" HorizontalAlignment="Left" Height="300" Margin="123,90,0,0" VerticalAlignment="Top" Width="640" ItemsSource="{Binding Path=ListOfPages}" >
+            <ListView.Resources>
+                <Style TargetType="{x:Type ListViewItem}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBiggest}"
+                      Value="true">
+                            <Setter Property="Background"
+                  Value="LightGreen" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListView.Resources>
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="URL" DisplayMemberBinding="{Binding Path=URL}" Width="380"/>
@@ -21,13 +32,10 @@
             </ListView.View>
         </ListView>
         <Button Content="Посчитать теги" Command="{Binding Path=FindTagsCommand}" HorizontalAlignment="Left" Margin="10,90,0,0" VerticalAlignment="Top" Width="90"/>
+        <Button Content="{Binding Path=StartStopButtonName}" Command="{Binding Path=StartStopCommand}" HorizontalAlignment="Left" Margin="10,120,0,0" VerticalAlignment="Top" Width="90"/>
+        <Button Content="Отменить" Command="{Binding Path=AbortCommand}" HorizontalAlignment="Left" Margin="10,180,0,0" VerticalAlignment="Top" Width="90"/>
         <Label Content="{Binding Path=Status}" HorizontalAlignment="Left" Margin="10,35,0,0" VerticalAlignment="Top"/>
-        <Grid>
-            <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Margin="0,389,0,0"/>
-            <StackPanel Orientation="Horizontal">
-                <Label Content="{Binding CurrentScriptName}" VerticalAlignment="Center" FontWeight="Bold" FontStyle="Italic" Margin="10, 0, 0, 0"/>
-            </StackPanel>
-        </Grid>
+        <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Margin="0,389,0,0"/>
     </Grid>
 
 </Window>

@@ -5,9 +5,9 @@ namespace HtmlParser.Managers
     class ProgressBarManager
     {
         public delegate void ProgressBarManagerHandler(object sender, NewProgressBarValueEventsArgs e);
-        public event ProgressBarManagerHandler NewProgressBarValue;
+        public event ProgressBarManagerHandler Increase;
 
-        private static ProgressBarManager _instance;
+        private static readonly ProgressBarManager _instance;
 
         private ProgressBarManager() {}
 
@@ -16,9 +16,9 @@ namespace HtmlParser.Managers
             get => _instance ?? new ProgressBarManager();
         }
 
-        public void ChangeProgressBarValue(double newValue)
+        public void IncreaseProgress(double newValue)
         {
-            NewProgressBarValue?.Invoke(this, new NewProgressBarValueEventsArgs(newValue));
+            Increase?.Invoke(this, new NewProgressBarValueEventsArgs(newValue));
         }
     }
 }
