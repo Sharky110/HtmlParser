@@ -16,7 +16,7 @@ using System.Windows.Input;
 
 namespace HtmlParser.ViewModels
 {
-    class HtmlParserVM : HtmlParserVMBase
+    class HtmlParserVM : ViewModelPropertyNotification
     {
         #region Constants
 
@@ -37,33 +37,28 @@ namespace HtmlParser.ViewModels
 
         #region Private variables
 
-        private ObservableCollection<Page> _listOfPages;
         private string _filePath;
         private string _status;
+        private string _startStopButtonName;
+
         private double _progressBarValue;
         private double _itemProgressValue;
         private double percent;
 
+        private ObservableCollection<Page> _listOfPages;
         private ManualResetEvent _manualEvent;
 
         private CancellationTokenSource source;
         private CancellationToken token;
-        private string _startStopButtonName;
-
+        
         #endregion
 
         #region Properties
 
         public ObservableCollection<Page> ListOfPages
         {
-            get
-            {
-                return _listOfPages;
-            }
-            set
-            {
-                SetProperty(ref _listOfPages, value);
-            }
+            get => _listOfPages;
+            set => SetProperty(ref _listOfPages, value);
         }
 
         public string FilePath
@@ -119,14 +114,11 @@ namespace HtmlParser.ViewModels
         private void Abort()
         {
             if (Models.Status.IsWorking(Status))
-            {
                 source?.Cancel();
-            }
         }
 
         private void StartStop()
         {
-            
             if (Status == Models.Status.TaskPaused)
             {
                 _manualEvent.Set();
@@ -134,12 +126,10 @@ namespace HtmlParser.ViewModels
             }
             else if (Models.Status.IsWorking(Status))
             {
-
                 _manualEvent.Reset();
                 Status = Models.Status.TaskPaused;
                 StartStopButtonName = Resume;
             }
-
         }
 
         public async void OpenFile()
@@ -158,6 +148,7 @@ namespace HtmlParser.ViewModels
             var sourceFile = await Task.Run(() => File.ReadAllText(FilePath, Encoding.GetEncoding(1252)));
 
             ListOfPages = new ObservableCollection<Page>(sourceFile.Split('\n').Select(x => new Page(x)).ToList());
+
             if(ListOfPages.Count != 0)
                 percent = 50d / ListOfPages.Count;
         }
@@ -264,11 +255,11 @@ namespace HtmlParser.ViewModels
                     Status = Models.Status.TaskAborted;
                     return;
                 }
+
                 _manualEvent.WaitOne();
+
                 if (page.AmountOfTags == ListOfPages.Max(p => p.AmountOfTags))
-                {
                     page.IsBiggest = true;
-                }
             }
         }
 

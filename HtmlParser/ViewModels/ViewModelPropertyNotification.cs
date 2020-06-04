@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace HtmlParser.ViewModels
 {
-    class HtmlParserVMBase : INotifyPropertyChanged
+    class ViewModelPropertyNotification : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
