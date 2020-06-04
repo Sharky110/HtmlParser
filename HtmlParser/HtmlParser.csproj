@@ -61,7 +61,7 @@
     <Compile Include="Models\Page.cs" />
     <Compile Include="Models\Status.cs" />
     <Compile Include="ViewModels\HtmlParserVM.cs" />
-    <Compile Include="ViewModels\HtmlParserVMBase.cs" />
+    <Compile Include="ViewModels\ViewModelPropertyNotification.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
